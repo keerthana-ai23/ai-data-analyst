@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-
+import matplotlib.pyplot as plt
 st.set_page_config(
     page_title="AI Data Analyst",
     layout="wide"
@@ -39,6 +39,21 @@ if uploaded_file is not None:
 
     st.subheader("Summary Statistics")
     st.dataframe(df.describe())
+
+    st.subheader("Correlation Heatmap")
+
+    numeric_df = df.select_dtypes(include=['number'])
+    corr = numeric_df.corr()
+    fig, ax = plt.subplots(figsize=(8,6))
+    ax.imshow(corr)
+
+    ax.set_xticks(range(len(corr.columns)))
+    ax.set_xticklabels(corr.columns, rotation=90)
+
+    ax.set_yticks(range(len(corr.columns)))
+    ax.set_yticklabels(corr.columns)
+
+    st.pyplot(fig)
 
     st.subheader("AI Insights")
 
