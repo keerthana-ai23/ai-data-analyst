@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+#import plotly.express as px
 
 st.set_page_config(page_title="AI Data Analyst", layout="wide")
 
@@ -35,24 +35,28 @@ if uploaded_file is not None:
     st.subheader("Summary Statistics")
     st.dataframe(df.describe())
 
-    numeric_cols = df.select_dtypes(
-        include=["int64", "float64"]
-    ).columns
-
-    if len(numeric_cols) > 0:
-
-        selected_col = st.selectbox(
-            "Choose a column for visualization",
-            numeric_cols
-        )
-
-        fig = px.histogram(
-            df,
-            x=selected_col,
-            title=f"Distribution of {selected_col}"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
+    
 else:
     st.info("Upload a CSV file to begin analysis.")
+    st.subheader("AI Insights")
+
+st.write(f"Dataset contains {df.shape[0]} rows and {df.shape[1]} columns.")
+
+missing = df.isnull().sum().sum()
+st.write(f"Total missing values: {missing}")
+
+duplicates = df.duplicated().sum()
+st.write(f"Duplicate rows: {duplicates}")
+
+if missing == 0:
+    st.success("Dataset is clean with no missing values.")
+else:
+    st.warning("Dataset contains missing values and may require cleaning.")
+    report = df.describe().to_csv()
+
+st.download_button(
+    label="Download Analysis Report",
+    data=report,
+    file_name="analysis_report.csv",
+    mime="text/csv"
+)
