@@ -21,7 +21,7 @@ st.write(
 # -----------------------------
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-1.5-flash-latest")
 except:
     model = None
 
@@ -178,15 +178,17 @@ if uploaded_file is not None:
 
             with st.spinner("Analyzing..."):
 
-                response = model.generate_content(
-                    prompt
-                )
+               try:
+ 
+                   response = model.generate_content(prompt)
 
-                st.success("AI Response")
+                   st.success("AI Response")
 
-                st.write(
-                    response.text
-                )
+                   st.write(response.text)
+
+                except Exception as e:
+
+                    st.error(f"Gemini Error: {str(e)}")
 
         else:
             st.error(
