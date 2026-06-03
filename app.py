@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-
+import matplotlib.pyplot as plt
 # -----------------------------
 # PAGE CONFIG
 # -----------------------------
@@ -75,6 +75,54 @@ if uploaded_file is not None:
     # -----------------------------
     st.subheader("Summary Statistics")
     st.dataframe(df.describe())
+    # =============================
+# CORRELATION ANALYSIS
+# =============================
+
+st.subheader("📊 Correlation Analysis")
+
+numeric_df = df.select_dtypes(
+    include=["int64", "float64"]
+)
+
+if len(numeric_df.columns) > 1:
+
+    corr_matrix = numeric_df.corr()
+
+    st.dataframe(corr_matrix)
+
+    st.subheader("🔥 Correlation Heatmap")
+
+    fig, ax = plt.subplots(
+        figsize=(8, 6)
+    )
+
+    heatmap = ax.imshow(
+        corr_matrix,
+        cmap="coolwarm",
+        aspect="auto"
+    )
+
+    ax.set_xticks(
+        range(len(corr_matrix.columns))
+    )
+
+    ax.set_xticklabels(
+        corr_matrix.columns,
+        rotation=90
+    )
+
+    ax.set_yticks(
+        range(len(corr_matrix.columns))
+    )
+
+    ax.set_yticklabels(
+        corr_matrix.columns
+    )
+
+    plt.colorbar(heatmap)
+
+    st.pyplot(fig)
 
     # -----------------------------
     # VISUALIZATION
@@ -101,30 +149,71 @@ if uploaded_file is not None:
     # -----------------------------
     # AI INSIGHTS
     # -----------------------------
-    st.subheader("🧠 AI Insights")
+# =============================
+# HEALTHCARE AI INSIGHTS
+# =============================
 
-    missing = df.isnull().sum().sum()
+st.subheader("🩺 Healthcare AI Insights")
 
-    st.write(
-        f"Dataset contains {df.shape[0]} rows and {df.shape[1]} columns."
+missing = df.isnull().sum().sum()
+
+st.write(
+    f"Total Records: {df.shape[0]}"
+)
+
+st.write(
+    f"Features: {df.shape[1]}"
+)
+
+st.write(
+    f"Missing Values: {missing}"
+)
+
+st.write(
+    f"Duplicate Records: {duplicates}"
+)
+
+if missing == 0:
+    st.success(
+        "Dataset quality is good."
+    )
+else:
+    st.warning(
+        "Dataset contains missing values."
     )
 
-    st.write(
-        f"Total missing values: {missing}"
-    )
+if len(numeric_df.columns) > 1:
 
-    st.write(
-        f"Duplicate rows: {duplicates}"
-    )
+    corr_matrix = numeric_df.corr()
 
-    if missing == 0:
-        st.success(
-            "Dataset is clean with no missing values."
+    strongest_corr = (
+        corr_matrix.abs()
+        .unstack()
+        .sort_values(
+            ascending=False
         )
-    else:
-        st.warning(
-            "Dataset contains missing values and may require cleaning."
-        )
+    )
+
+    strongest_corr = strongest_corr[
+        strongest_corr < 1
+    ]
+
+    strongest_value = strongest_corr.iloc[0]
+
+    strongest_pair = strongest_corr.index[0]
+
+    st.info(
+        f"""
+        Strongest relationship detected:
+
+        {strongest_pair[0]}
+        ↔
+        {strongest_pair[1]}
+
+        Correlation:
+        {strongest_value:.2f}
+        """
+    )
 
     # -----------------------------
     # DATA CLEANING SUGGESTIONS
@@ -152,80 +241,117 @@ if uploaded_file is not None:
     # -----------------------------
     # SMART DATASET Q&A
     # -----------------------------
-    st.subheader("💬 Ask AI About Your Dataset")
+# =============================
+# DATASET ASSISTANT
+# =============================
 
-    user_question = st.text_input(
-        "Ask any question about your dataset"
-    )
+st.subheader(
+    "💬 Ask About Dataset"
+)
 
-    if user_question:
+question = st.text_input(
+    "Ask a question"
+)
 
-        q = user_question.lower()
+if question:
 
-        if "row" in q:
-            st.success(
-                f"The dataset contains {df.shape[0]} rows."
-            )
+    q = question.lower()
 
-        elif "column" in q:
-            st.success(
-                f"The dataset contains {df.shape[1]} columns."
-            )
+    if "row" in q:
 
-        elif "missing" in q:
-            st.success(
-                f"Total missing values: {missing}"
-            )
+        st.success(
+            f"Dataset contains {df.shape[0]} rows."
+        )
 
-        elif "duplicate" in q:
-            st.success(
-                f"Duplicate rows: {duplicates}"
-            )
+    elif "column" in q:
 
-        elif "datatype" in q or "data type" in q:
-            st.dataframe(df.dtypes.astype(str))
+        st.success(
+            f"Dataset contains {df.shape[1]} columns."
+        )
 
-        elif "summary" in q or "statistics" in q:
-            st.dataframe(df.describe())
+    elif "missing" in q:
 
-        elif "clean" in q:
-            if missing == 0:
-                st.success(
-                    "Dataset appears clean with no missing values."
-                )
-            else:
-                st.warning(
-                    "Dataset requires cleaning due to missing values."
-                )
+        st.success(
+            f"Missing values: {missing}"
+        )
 
-        elif "tell" in q or "explain" in q:
+    elif "duplicate" in q:
 
-            st.success(
-                f"""
-                This dataset contains {df.shape[0]} rows and {df.shape[1]} columns.
+        st.success(
+            f"Duplicate records: {duplicates}"
+        )
 
-                There are {missing} missing values and {duplicates} duplicate rows.
+    elif "correlation" in q:
 
-                The dataset can be used for exploratory data analysis,
-                trend analysis, machine learning, and business insights.
-                """
-            )
+        st.dataframe(
+            corr_matrix
+        )
 
-        else:
+    elif (
+        "explain" in q
+        or "dataset" in q
+    ):
 
-            st.info(
-                f"""
-                I can answer questions about:
+        st.success(
+            f"""
+            This healthcare dataset contains
+            {df.shape[0]} records and
+            {df.shape[1]} features.
 
-                • Rows
-                • Columns
-                • Missing values
-                • Duplicate records
-                • Summary statistics
-                • Data types
-                • Cleaning suggestions
-                """
-            )
+            Missing values:
+            {missing}
+
+            Duplicate records:
+            {duplicates}
+
+            The dataset can be used for:
+
+            • Patient risk analysis
+
+            • Disease prediction
+
+            • Healthcare trend analysis
+
+            • Machine learning
+
+            • Clinical decision support
+            """
+        )
+
+    elif (
+        "risk" in q
+        or "high risk" in q
+    ):
+
+        st.info(
+            """
+            High-risk patients can be identified
+            using highly correlated variables
+            and predictive modeling.
+            """
+        )
+
+    else:
+
+        st.info(
+            """
+            Try asking:
+
+            • Explain dataset
+
+            • How many rows?
+
+            • How many columns?
+
+            • Missing values
+
+            • Duplicate records
+
+            • Show correlations
+
+            • What insights do you find?
+            """
+        )
 
     # -----------------------------
     # DOWNLOAD REPORT
