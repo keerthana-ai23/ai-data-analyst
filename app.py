@@ -79,19 +79,16 @@ if uploaded_file is not None:
 # CORRELATION ANALYSIS
 # =============================
 
-st.subheader("📊 Correlation Analysis")
+    st.subheader("📊 Correlation Analysis")
+    st.write("Debug:", df.shape)
+    numeric_df = df.select_dtypes(
+         include=["int64", "float64"]
+    )
 
-numeric_df = df.select_dtypes(
-    include=["int64", "float64"]
-)
-
-if len(numeric_df.columns) > 1:
-
-    corr_matrix = numeric_df.corr()
-
-    st.dataframe(corr_matrix)
-
-    st.subheader("🔥 Correlation Heatmap")
+    if len(numeric_df.columns) > 1:
+        corr_matrix = numeric_df.corr()
+        st.dataframe(corr_matrix)
+        st.subheader("🔥 Correlation Heatmap")
 
     fig, ax = plt.subplots(
         figsize=(8, 6)
