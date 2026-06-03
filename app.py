@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import google.generativeai as genai
 
 # -----------------------------
 # PAGE CONFIG
@@ -13,17 +12,8 @@ st.set_page_config(
 st.title("🤖 AI Data Analyst Assistant")
 
 st.write(
-    "Upload any CSV file and perform AI-powered Exploratory Data Analysis."
+    "Upload any CSV file and perform Exploratory Data Analysis."
 )
-
-# -----------------------------
-# GEMINI SETUP
-# -----------------------------
-try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-2.0-flash")
-except:
-    model = None
 
 # -----------------------------
 # FILE UPLOAD
@@ -37,15 +27,15 @@ if uploaded_file is not None:
 
     df = pd.read_csv(uploaded_file)
 
-    # =============================
+    # -----------------------------
     # DATA PREVIEW
-    # =============================
+    # -----------------------------
     st.subheader("Dataset Preview")
     st.dataframe(df.head())
 
-    # =============================
-    # DATASET SHAPE
-    # =============================
+    # -----------------------------
+    # SHAPE
+    # -----------------------------
     st.subheader("Dataset Shape")
 
     col1, col2 = st.columns(2)
@@ -56,34 +46,39 @@ if uploaded_file is not None:
     with col2:
         st.metric("Columns", df.shape[1])
 
-    # =============================
+    # -----------------------------
     # MISSING VALUES
-    # =============================
+    # -----------------------------
     st.subheader("Missing Values")
-    st.dataframe(df.isnull().sum())
+    missing_df = pd.DataFrame(
+        df.isnull().sum(),
+        columns=["Missing Count"]
+    )
+    st.dataframe(missing_df)
 
-    # =============================
+    # -----------------------------
     # DUPLICATES
-    # =============================
-    st.subheader("Duplicate Records")
+    # -----------------------------
     duplicates = df.duplicated().sum()
+
+    st.subheader("Duplicate Records")
     st.write(duplicates)
 
-    # =============================
+    # -----------------------------
     # DATA TYPES
-    # =============================
+    # -----------------------------
     st.subheader("Data Types")
     st.dataframe(df.dtypes.astype(str))
 
-    # =============================
+    # -----------------------------
     # SUMMARY STATS
-    # =============================
+    # -----------------------------
     st.subheader("Summary Statistics")
     st.dataframe(df.describe())
 
-    # =============================
-    # SIMPLE VISUALIZATION
-    # =============================
+    # -----------------------------
+    # VISUALIZATION
+    # -----------------------------
     numeric_columns = df.select_dtypes(
         include=["int64", "float64"]
     ).columns
@@ -93,21 +88,19 @@ if uploaded_file is not None:
         st.subheader("Visualization")
 
         selected_column = st.selectbox(
-            "Choose a numeric column",
+            "Choose Numeric Column",
             numeric_columns
         )
 
-        chart_data = (
+        st.bar_chart(
             df[selected_column]
             .value_counts()
             .head(20)
         )
 
-        st.bar_chart(chart_data)
-
-    # =============================
+    # -----------------------------
     # AI INSIGHTS
-    # =============================
+    # -----------------------------
     st.subheader("🧠 AI Insights")
 
     missing = df.isnull().sum().sum()
@@ -133,9 +126,32 @@ if uploaded_file is not None:
             "Dataset contains missing values and may require cleaning."
         )
 
-    # =============================
-    # AI CHATBOT
-    # =============================
+    # -----------------------------
+    # DATA CLEANING SUGGESTIONS
+    # -----------------------------
+    st.subheader("🧹 Data Cleaning Suggestions")
+
+    if missing > 0:
+        st.warning(
+            "Consider filling or removing missing values."
+        )
+    else:
+        st.success(
+            "No missing values detected."
+        )
+
+    if duplicates > 0:
+        st.warning(
+            f"{duplicates} duplicate rows detected. Consider removing duplicates."
+        )
+    else:
+        st.success(
+            "No duplicate rows detected."
+        )
+
+    # -----------------------------
+    # SMART DATASET Q&A
+    # -----------------------------
     st.subheader("💬 Ask AI About Your Dataset")
 
     user_question = st.text_input(
@@ -144,54 +160,76 @@ if uploaded_file is not None:
 
     if user_question:
 
-        if model is not None:
+        q = user_question.lower()
 
-            dataset_context = f"""
-            Dataset Shape:
-            {df.shape}
-
-            Columns:
-            {list(df.columns)}
-
-            Missing Values:
-            {df.isnull().sum().to_string()}
-
-            Summary Statistics:
-            {df.describe().to_string()}
-
-            First 5 Rows:
-            {df.head().to_string()}
-            """
-
-            prompt = f"""
-            You are a professional Data Analyst.
-
-            Dataset Information:
-
-            {dataset_context}
-
-            User Question:
-            {user_question}
-
-            Give a clear data analysis answer.
-            """
-
-            with st.spinner("Analyzing..."):
-                try:
-                    response = model.generate_content(prompt)
-                    st.success("AI Response")
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"Gemini Error: {str(e)}")
-
-        else:
-            st.error(
-                "Gemini API key not configured."
+        if "row" in q:
+            st.success(
+                f"The dataset contains {df.shape[0]} rows."
             )
 
-    # =============================
+        elif "column" in q:
+            st.success(
+                f"The dataset contains {df.shape[1]} columns."
+            )
+
+        elif "missing" in q:
+            st.success(
+                f"Total missing values: {missing}"
+            )
+
+        elif "duplicate" in q:
+            st.success(
+                f"Duplicate rows: {duplicates}"
+            )
+
+        elif "datatype" in q or "data type" in q:
+            st.dataframe(df.dtypes.astype(str))
+
+        elif "summary" in q or "statistics" in q:
+            st.dataframe(df.describe())
+
+        elif "clean" in q:
+            if missing == 0:
+                st.success(
+                    "Dataset appears clean with no missing values."
+                )
+            else:
+                st.warning(
+                    "Dataset requires cleaning due to missing values."
+                )
+
+        elif "tell" in q or "explain" in q:
+
+            st.success(
+                f"""
+                This dataset contains {df.shape[0]} rows and {df.shape[1]} columns.
+
+                There are {missing} missing values and {duplicates} duplicate rows.
+
+                The dataset can be used for exploratory data analysis,
+                trend analysis, machine learning, and business insights.
+                """
+            )
+
+        else:
+
+            st.info(
+                f"""
+                I can answer questions about:
+
+                • Rows
+                • Columns
+                • Missing values
+                • Duplicate records
+                • Summary statistics
+                • Data types
+                • Cleaning suggestions
+                """
+            )
+
+    # -----------------------------
     # DOWNLOAD REPORT
-    # =============================
+    # -----------------------------
     report = df.describe().to_csv()
 
     st.download_button(
@@ -202,6 +240,7 @@ if uploaded_file is not None:
     )
 
 else:
+
     st.info(
         "Upload a CSV file to begin analysis."
     )
