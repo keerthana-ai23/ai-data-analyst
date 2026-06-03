@@ -177,17 +177,11 @@ if uploaded_file is not None:
             """
 
             with st.spinner("Analyzing..."):
-
-               try:
- 
-                   response = model.generate_content(prompt)
-
-                   st.success("AI Response")
-
-                   st.write(response.text)
-
+                try:
+                    response = model.generate_content(prompt)
+                    st.success("AI Response")
+                    st.write(response.text)
                 except Exception as e:
-
                     st.error(f"Gemini Error: {str(e)}")
 
         else:
