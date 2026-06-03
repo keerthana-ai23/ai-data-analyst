@@ -1,17 +1,33 @@
 import streamlit as st
 import pandas as pd
+import google.generativeai as genai
 
+# -----------------------------
+# PAGE CONFIG
+# -----------------------------
 st.set_page_config(
     page_title="AI Data Analyst",
     layout="wide"
 )
 
-st.title("🤖 AI Data Analyst Dashboard")
+st.title("🤖 AI Data Analyst Assistant")
 
 st.write(
-    "Upload any CSV file and automatically perform Exploratory Data Analysis (EDA)."
+    "Upload any CSV file and perform AI-powered Exploratory Data Analysis."
 )
 
+# -----------------------------
+# GEMINI SETUP
+# -----------------------------
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    model = genai.GenerativeModel("gemini-1.5-flash")
+except:
+    model = None
+
+# -----------------------------
+# FILE UPLOAD
+# -----------------------------
 uploaded_file = st.file_uploader(
     "Upload your CSV file",
     type=["csv"]
@@ -21,11 +37,15 @@ if uploaded_file is not None:
 
     df = pd.read_csv(uploaded_file)
 
-    # Dataset Preview
+    # =============================
+    # DATA PREVIEW
+    # =============================
     st.subheader("Dataset Preview")
     st.dataframe(df.head())
 
-    # Dataset Shape
+    # =============================
+    # DATASET SHAPE
+    # =============================
     st.subheader("Dataset Shape")
 
     col1, col2 = st.columns(2)
@@ -36,163 +56,147 @@ if uploaded_file is not None:
     with col2:
         st.metric("Columns", df.shape[1])
 
-    # Missing Values
+    # =============================
+    # MISSING VALUES
+    # =============================
     st.subheader("Missing Values")
+    st.dataframe(df.isnull().sum())
 
-    missing_df = pd.DataFrame({
-        "Column": df.columns,
-        "Missing Values": df.isnull().sum().values
-    })
-
-    st.dataframe(missing_df)
-
-    total_missing = df.isnull().sum().sum()
-
-    # Duplicate Records
+    # =============================
+    # DUPLICATES
+    # =============================
     st.subheader("Duplicate Records")
-
     duplicates = df.duplicated().sum()
+    st.write(duplicates)
 
-    st.write(f"Duplicate Rows: {duplicates}")
-
-    # Data Types
+    # =============================
+    # DATA TYPES
+    # =============================
     st.subheader("Data Types")
     st.dataframe(df.dtypes.astype(str))
 
-    # Summary Statistics
+    # =============================
+    # SUMMARY STATS
+    # =============================
     st.subheader("Summary Statistics")
     st.dataframe(df.describe())
 
-    # AI Insights
-    st.subheader("AI Insights")
+    # =============================
+    # SIMPLE VISUALIZATION
+    # =============================
+    numeric_columns = df.select_dtypes(
+        include=["int64", "float64"]
+    ).columns
+
+    if len(numeric_columns) > 0:
+
+        st.subheader("Visualization")
+
+        selected_column = st.selectbox(
+            "Choose a numeric column",
+            numeric_columns
+        )
+
+        chart_data = (
+            df[selected_column]
+            .value_counts()
+            .head(20)
+        )
+
+        st.bar_chart(chart_data)
+
+    # =============================
+    # AI INSIGHTS
+    # =============================
+    st.subheader("🧠 AI Insights")
+
+    missing = df.isnull().sum().sum()
 
     st.write(
         f"Dataset contains {df.shape[0]} rows and {df.shape[1]} columns."
     )
 
     st.write(
-        f"Total missing values: {total_missing}"
+        f"Total missing values: {missing}"
     )
 
     st.write(
         f"Duplicate rows: {duplicates}"
     )
 
-    # Data Cleaning Suggestions
-    st.subheader("Data Cleaning Suggestions")
-
-    if total_missing > 0:
-        st.warning(
-            f"The dataset contains {total_missing} missing values. Consider filling or removing them."
+    if missing == 0:
+        st.success(
+            "Dataset is clean with no missing values."
         )
     else:
-        st.success(
-            "No missing values detected."
-        )
-
-    if duplicates > 0:
         st.warning(
-            f"The dataset contains {duplicates} duplicate rows. Consider removing duplicates."
-        )
-    else:
-        st.success(
-            "No duplicate rows detected."
+            "Dataset contains missing values and may require cleaning."
         )
 
-    # Column Distribution
-    numeric_cols = df.select_dtypes(include="number").columns
+    # =============================
+    # AI CHATBOT
+    # =============================
+    st.subheader("💬 Ask AI About Your Dataset")
 
-    if len(numeric_cols) > 0:
-
-        st.subheader("Column Distribution")
-
-        selected_col = st.selectbox(
-            "Select a numeric column",
-            numeric_cols
-        )
-
-        st.bar_chart(
-            df[selected_col].value_counts().head(20)
-        )
-
-    # AI Assistant
-    st.subheader("🤖 Ask AI About Your Dataset")
-
-    question = st.text_input(
-        "Ask a question about the uploaded dataset"
+    user_question = st.text_input(
+        "Ask any question about your dataset"
     )
 
-    if question:
+    if user_question:
 
-        q = question.lower()
+        if model is not None:
 
-        if "row" in q:
-            st.success(
-                f"The dataset contains {df.shape[0]} rows."
-            )
+            dataset_context = f"""
+            Dataset Shape:
+            {df.shape}
 
-        elif "column" in q:
-            st.success(
-                f"The dataset contains {df.shape[1]} columns."
-            )
+            Columns:
+            {list(df.columns)}
 
-        elif "missing" in q:
-            st.success(
-                f"The dataset contains {total_missing} missing values."
-            )
+            Missing Values:
+            {df.isnull().sum().to_string()}
 
-        elif "duplicate" in q:
-            st.success(
-                f"The dataset contains {duplicates} duplicate rows."
-            )
+            Summary Statistics:
+            {df.describe().to_string()}
 
-        elif "datatype" in q or "data type" in q:
-            st.dataframe(df.dtypes.astype(str))
+            First 5 Rows:
+            {df.head().to_string()}
+            """
 
-        elif "average" in q or "mean" in q:
+            prompt = f"""
+            You are a professional Data Analyst.
 
-            numeric_df = df.select_dtypes(include="number")
+            Dataset Information:
 
-            if len(numeric_df.columns) > 0:
-                st.dataframe(
-                    numeric_df.mean().reset_index().rename(
-                        columns={
-                            "index": "Column",
-                            0: "Mean"
-                        }
-                    )
+            {dataset_context}
+
+            User Question:
+            {user_question}
+
+            Give a clear data analysis answer.
+            """
+
+            with st.spinner("Analyzing..."):
+
+                response = model.generate_content(
+                    prompt
                 )
 
-        elif "summary" in q:
-            st.dataframe(df.describe())
+                st.success("AI Response")
 
-        elif "clean" in q:
-            st.write(
-                "Recommended cleaning steps:"
-            )
-
-            if total_missing > 0:
                 st.write(
-                    f"• Handle {total_missing} missing values."
-                )
-
-            if duplicates > 0:
-                st.write(
-                    f"• Remove {duplicates} duplicate rows."
-                )
-
-            if total_missing == 0 and duplicates == 0:
-                st.write(
-                    "• Dataset appears clean."
+                    response.text
                 )
 
         else:
-            st.info(
-                "I can currently answer questions about rows, columns, missing values, duplicates, averages, summary statistics, data types, and cleaning suggestions."
+            st.error(
+                "Gemini API key not configured."
             )
 
-    # Download Report
-    report = df.describe(include="all").to_csv()
+    # =============================
+    # DOWNLOAD REPORT
+    # =============================
+    report = df.describe().to_csv()
 
     st.download_button(
         label="📥 Download Analysis Report",
