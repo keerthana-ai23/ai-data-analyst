@@ -150,34 +150,17 @@ if uploaded_file is not None:
 # HEALTHCARE AI INSIGHTS
 # =============================
 
-st.subheader("🩺 Healthcare AI Insights")
+    st.subheader("🩺 Healthcare AI Insights")
 
-missing = df.isnull().sum().sum()
-
-st.write(
-    f"Total Records: {df.shape[0]}"
-)
-
-st.write(
-    f"Features: {df.shape[1]}"
-)
-
-st.write(
-    f"Missing Values: {missing}"
-)
-
-st.write(
-    f"Duplicate Records: {duplicates}"
-)
-
-if missing == 0:
-    st.success(
-        "Dataset quality is good."
-    )
-else:
-    st.warning(
-        "Dataset contains missing values."
-    )
+    missing = df.isnull().sum().sum()
+    st.write(f"Total Records: {df.shape[0]}")
+    st.write(f"Features: {df.shape[1]}")
+    st.write(f"Missing Values: {missing}")
+    st.write(f"Duplicate Records: {duplicates}")
+    if missing == 0:
+        st.success("Dataset quality is good.")
+    else:
+        st.warning("Dataset contains missing values.")
 
 if len(numeric_df.columns) > 1:
 
