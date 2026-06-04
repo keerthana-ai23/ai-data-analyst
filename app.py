@@ -1,377 +1,270 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-
-# ==================================
-# PAGE CONFIG
-# ==================================
 
 st.set_page_config(
-    page_title="Healthcare AI Data Analyst",
-    layout="wide"
+page_title="GenAI Data Analyst Assistant",
+layout="wide"
 )
 
-st.title("🩺 Healthcare AI Data Analyst Assistant")
+st.title("🤖 GenAI-Powered Data Analyst Assistant")
 
 st.write(
-    "Upload any healthcare CSV dataset and perform Exploratory Data Analysis."
+"Upload any CSV dataset and receive automated analysis, insights, recommendations, and AI-style explanations."
 )
-
-# ==================================
-# FILE UPLOAD
-# ==================================
 
 uploaded_file = st.file_uploader(
-    "Upload your CSV file",
-    type=["csv"]
+"Upload CSV File",
+type=["csv"]
 )
-
-# ==================================
-# MAIN APP
-# ==================================
 
 if uploaded_file is not None:
 
-    df = pd.read_csv(uploaded_file)
+```
+df = pd.read_csv(uploaded_file)
 
-    # ==================================
-    # DATA PREVIEW
-    # ==================================
+missing = df.isnull().sum().sum()
+duplicates = df.duplicated().sum()
 
-    st.subheader("📄 Dataset Preview")
-    st.dataframe(df.head())
+numeric_df = df.select_dtypes(
+    include=["int64", "float64"]
+)
 
-    # ==================================
-    # DATASET SHAPE
-    # ==================================
+# ====================================
+# DATASET HEALTH SCORE
+# ====================================
 
-    st.subheader("📏 Dataset Shape")
+st.header("📊 Dataset Health Score")
 
-    col1, col2 = st.columns(2)
+score = 100
 
-    with col1:
-        st.metric("Rows", df.shape[0])
+if missing > 0:
+    score -= 20
 
-    with col2:
-        st.metric("Columns", df.shape[1])
+if duplicates > 0:
+    score -= 15
 
-    # ==================================
-    # DATA TYPES
-    # ==================================
+if len(numeric_df.columns) == 0:
+    score -= 25
 
-    st.subheader("🔠 Data Types")
-    st.dataframe(df.dtypes.astype(str))
+st.metric(
+    "Health Score",
+    f"{score}/100"
+)
 
-    # ==================================
-    # MISSING VALUES
-    # ==================================
+# ====================================
+# DATASET OVERVIEW
+# ====================================
 
-    st.subheader("❌ Missing Values")
+st.header("📄 Dataset Overview")
 
-    missing_df = pd.DataFrame(
-        df.isnull().sum(),
-        columns=["Missing Count"]
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        "Rows",
+        df.shape[0]
     )
 
-    st.dataframe(missing_df)
-
-    missing = df.isnull().sum().sum()
-
-    # ==================================
-    # DUPLICATES
-    # ==================================
-
-    duplicates = df.duplicated().sum()
-
-    st.subheader("📑 Duplicate Records")
-    st.write(duplicates)
-
-    # ==================================
-    # SUMMARY STATISTICS
-    # ==================================
-
-    st.subheader("📊 Summary Statistics")
-
-    st.dataframe(
-        df.describe(include="all")
+with col2:
+    st.metric(
+        "Columns",
+        df.shape[1]
     )
 
-    # ==================================
-    # CORRELATION ANALYSIS
-    # ==================================
-
-    numeric_df = df.select_dtypes(
-        include=["int64", "float64"]
+with col3:
+    st.metric(
+        "Numeric Features",
+        len(numeric_df.columns)
     )
 
-    if len(numeric_df.columns) > 1:
+st.dataframe(
+    df.head()
+)
 
-        st.subheader("📈 Correlation Matrix")
+# ====================================
+# AI EXECUTIVE SUMMARY
+# ====================================
 
-        corr_matrix = numeric_df.corr()
+st.header("🧠 AI Executive Summary")
 
-        st.dataframe(corr_matrix)
+summary = f"""
+This dataset contains {df.shape[0]} rows and {df.shape[1]} columns.
 
-        # ==================================
-        # HEATMAP
-        # ==================================
+The dataset contains {missing} missing values and {duplicates} duplicate records.
 
-        st.subheader("🔥 Correlation Heatmap")
+There are {len(numeric_df.columns)} numeric variables available for statistical analysis.
 
-        fig, ax = plt.subplots(
-            figsize=(8, 6)
-        )
+The dataset appears suitable for exploratory data analysis, machine learning, predictive analytics, and business intelligence reporting.
+"""
 
-        heatmap = ax.imshow(
-            corr_matrix,
-            cmap="coolwarm",
-            aspect="auto"
-        )
+st.info(summary)
 
-        ax.set_xticks(
-            range(len(corr_matrix.columns))
-        )
+# ====================================
+# DATA QUALITY
+# ====================================
 
-        ax.set_xticklabels(
-            corr_matrix.columns,
-            rotation=90
-        )
+st.header("🧹 Data Quality Assessment")
 
-        ax.set_yticks(
-            range(len(corr_matrix.columns))
-        )
-
-        ax.set_yticklabels(
-            corr_matrix.columns
-        )
-
-        plt.colorbar(heatmap)
-
-        st.pyplot(fig)
-
-        # ==================================
-        # STRONGEST CORRELATION
-        # ==================================
-
-        strongest_corr = (
-            corr_matrix.abs()
-            .unstack()
-            .sort_values(
-                ascending=False
-            )
-        )
-
-        strongest_corr = strongest_corr[
-            strongest_corr < 1
-        ]
-
-        if len(strongest_corr) > 0:
-
-            strongest_pair = strongest_corr.index[0]
-            strongest_value = strongest_corr.iloc[0]
-
-            st.info(
-                f"""
-                Strongest relationship found:
-
-                {strongest_pair[0]} ↔ {strongest_pair[1]}
-
-                Correlation Score:
-                {strongest_value:.2f}
-                """
-            )
-
-    # ==================================
-    # VISUALIZATION
-    # ==================================
-
-    numeric_columns = numeric_df.columns
-
-    if len(numeric_columns) > 0:
-
-        st.subheader("📉 Data Visualization")
-
-        selected_column = st.selectbox(
-            "Select Numeric Column",
-            numeric_columns
-        )
-
-        st.bar_chart(
-            df[selected_column]
-            .value_counts()
-            .head(20)
-        )
-
-    # ==================================
-    # HEALTHCARE AI INSIGHTS
-    # ==================================
-
-    st.subheader("🩺 Healthcare AI Insights")
-
-    st.write(
-        f"Total Records: {df.shape[0]}"
-    )
-
-    st.write(
-        f"Total Features: {df.shape[1]}"
-    )
-
-    st.write(
-        f"Missing Values: {missing}"
-    )
-
-    st.write(
-        f"Duplicate Records: {duplicates}"
-    )
-
-    if missing == 0:
-        st.success(
-            "Dataset quality is good."
-        )
-    else:
-        st.warning(
-            "Dataset contains missing values."
-        )
-
-    if duplicates > 0:
-        st.warning(
-            f"{duplicates} duplicate records detected."
-        )
-
-    # ==================================
-    # CLEANING SUGGESTIONS
-    # ==================================
-
-    st.subheader("🧹 Data Cleaning Suggestions")
-
-    if missing > 0:
-        st.warning(
-            "Consider handling missing values."
-        )
-    else:
-        st.success(
-            "No missing values detected."
-        )
-
-    if duplicates > 0:
-        st.warning(
-            "Consider removing duplicate rows."
-        )
-    else:
-        st.success(
-            "No duplicate rows detected."
-        )
-
-    # ==================================
-    # DATASET ASSISTANT
-    # ==================================
-
-    st.subheader("💬 Ask About Your Dataset")
-
-    question = st.text_input(
-        "Ask a question"
-    )
-
-    if question:
-
-        q = question.lower()
-
-        if "row" in q:
-
-            st.success(
-                f"Dataset contains {df.shape[0]} rows."
-            )
-
-        elif "column" in q:
-
-            st.success(
-                f"Dataset contains {df.shape[1]} columns."
-            )
-
-        elif "missing" in q:
-
-            st.success(
-                f"Missing values: {missing}"
-            )
-
-        elif "duplicate" in q:
-
-            st.success(
-                f"Duplicate records: {duplicates}"
-            )
-
-        elif "correlation" in q:
-
-            if len(numeric_df.columns) > 1:
-                st.dataframe(corr_matrix)
-            else:
-                st.warning(
-                    "Not enough numeric columns."
-                )
-
-        elif "explain" in q or "dataset" in q:
-
-            st.success(
-                f"""
-                This dataset contains
-                {df.shape[0]} records and
-                {df.shape[1]} features.
-
-                Missing values: {missing}
-
-                Duplicate records: {duplicates}
-
-                Potential healthcare uses:
-
-                • Disease prediction
-
-                • Patient risk analysis
-
-                • Healthcare trend analysis
-
-                • Clinical decision support
-
-                • Predictive analytics
-                """
-            )
-
-        else:
-
-            st.info(
-                """
-                Try asking:
-
-                • Explain dataset
-
-                • How many rows?
-
-                • How many columns?
-
-                • Missing values
-
-                • Duplicate records
-
-                • Show correlations
-                """
-            )
-
-    # ==================================
-    # DOWNLOAD REPORT
-    # ==================================
-
-    report = df.describe(
-        include="all"
-    ).to_csv()
-
-    st.download_button(
-        label="📥 Download Analysis Report",
-        data=report,
-        file_name="analysis_report.csv",
-        mime="text/csv"
-    )
-
+if missing == 0:
+    st.success("No missing values detected.")
 else:
-
-    st.info(
-        "Upload a CSV file to begin analysis."
+    st.warning(
+        f"{missing} missing values detected."
     )
+
+if duplicates == 0:
+    st.success("No duplicate rows detected.")
+else:
+    st.warning(
+        f"{duplicates} duplicate rows detected."
+    )
+
+# ====================================
+# TOP CORRELATIONS
+# ====================================
+
+if len(numeric_df.columns) > 1:
+
+    st.header("📈 Top Correlations")
+
+    corr_matrix = numeric_df.corr()
+
+    corr_pairs = (
+        corr_matrix.abs()
+        .unstack()
+        .sort_values(
+            ascending=False
+        )
+    )
+
+    corr_pairs = corr_pairs[
+        corr_pairs < 1
+    ]
+
+    shown = set()
+
+    for pair, value in corr_pairs.items():
+
+        if pair not in shown:
+
+            st.write(
+                f"{pair[0]} ↔ {pair[1]} = {value:.2f}"
+            )
+
+            shown.add(pair)
+
+            if len(shown) == 5:
+                break
+
+# ====================================
+# AI RECOMMENDATIONS
+# ====================================
+
+st.header("💡 AI Recommendations")
+
+recommendations = []
+
+if duplicates > 0:
+    recommendations.append(
+        "Remove duplicate rows before modeling."
+    )
+
+if missing > 0:
+    recommendations.append(
+        "Handle missing values using imputation or removal."
+    )
+
+recommendations.append(
+    "Investigate highly correlated features."
+)
+
+recommendations.append(
+    "Consider building predictive models."
+)
+
+recommendations.append(
+    "Perform feature engineering."
+)
+
+for rec in recommendations:
+    st.write(f"• {rec}")
+
+# ====================================
+# DATASET CHAT
+# ====================================
+
+st.header("💬 Ask About Your Dataset")
+
+question = st.text_input(
+    "Ask a question"
+)
+
+if question:
+
+    q = question.lower()
+
+    if "row" in q:
+        st.success(
+            f"The dataset contains {df.shape[0]} rows."
+        )
+
+    elif "column" in q:
+        st.success(
+            f"The dataset contains {df.shape[1]} columns."
+        )
+
+    elif "missing" in q:
+        st.success(
+            f"The dataset contains {missing} missing values."
+        )
+
+    elif "duplicate" in q:
+        st.success(
+            f"The dataset contains {duplicates} duplicate rows."
+        )
+
+    elif "important" in q or "correlation" in q:
+
+        if len(numeric_df.columns) > 1:
+
+            strongest = corr_pairs.index[0]
+
+            st.success(
+                f"The strongest relationship is between {strongest[0]} and {strongest[1]}."
+            )
+
+    elif "machine learning" in q:
+
+        st.success(
+            "Yes. This dataset is suitable for machine learning if the target variable is clearly defined."
+        )
+
+    elif "tell" in q or "summary" in q:
+
+        st.success(summary)
+
+    else:
+
+        st.info(
+            "Try asking about rows, columns, missing values, duplicates, correlations, machine learning, or summary."
+        )
+
+# ====================================
+# DOWNLOAD REPORT
+# ====================================
+
+report = df.describe(
+    include="all"
+).to_csv()
+
+st.download_button(
+    label="📥 Download Report",
+    data=report,
+    file_name="analysis_report.csv",
+    mime="text/csv"
+)
+else:
+st.info(
+    "Upload a CSV file to begin analysis."
+)
+
