@@ -1,16 +1,62 @@
 import streamlit as st
 import pandas as pd
+import requests
+
+# ==========================
+# PAGE CONFIG
+# ==========================
 
 st.set_page_config(
-page_title="GenAI Data Analyst Assistant",
-layout="wide"
+    page_title="GenAI Data Analyst Assistant",
+    layout="wide"
 )
 
 st.title("🤖 GenAI-Powered Data Analyst Assistant")
 
 st.write(
-"Upload any CSV dataset and receive automated analysis, insights, recommendations, and AI-style explanations."
+    "Upload any CSV dataset and receive automated analysis, insights, recommendations, and AI-style explanations."
 )
+
+# ==========================
+# HUGGING FACE SETUP
+# ==========================
+
+HF_TOKEN = st.secrets.get("HF_TOKEN", "")
+
+API_URL = (
+    "https://api-inference.huggingface.co/models/"
+    "mistralai/Mistral-7B-Instruct-v0.2"
+)
+
+headers = {
+    "Authorization": f"Bearer {HF_TOKEN}"
+}
+
+
+def ask_llm(prompt):
+
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json={
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": 300
+            }
+        }
+    )
+
+    result = response.json()
+
+    if isinstance(result, list):
+        return result[0]["generated_text"]
+
+    return str(result)
+
+
+# ==========================
+# FILE UPLOAD
+# ==========================
 
 uploaded_file = st.file_uploader(
     "Upload CSV File",
@@ -30,11 +76,9 @@ numeric_df = df.select_dtypes(
     include=["int64", "float64"]
 )
 
-
-
-# ====================================
+# ==========================
 # DATASET HEALTH SCORE
-# ====================================
+# ==========================
 
 st.header("📊 Dataset Health Score")
 
@@ -54,25 +98,19 @@ st.metric(
     f"{score}/100"
 )
 
-# ====================================
+# ==========================
 # DATASET OVERVIEW
-# ====================================
+# ==========================
 
 st.header("📄 Dataset Overview")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric(
-        "Rows",
-        df.shape[0]
-    )
+    st.metric("Rows", df.shape[0])
 
 with col2:
-    st.metric(
-        "Columns",
-        df.shape[1]
-    )
+    st.metric("Columns", df.shape[1])
 
 with col3:
     st.metric(
@@ -80,51 +118,49 @@ with col3:
         len(numeric_df.columns)
     )
 
-st.dataframe(
-    df.head()
-)
+st.dataframe(df.head())
 
-# ====================================
-# AI EXECUTIVE SUMMARY
-# ====================================
+# ==========================
+# EXECUTIVE SUMMARY
+# ==========================
 
-st.header("🧠 AI Executive Summary")
+st.header("🧠 Executive Summary")
 
 summary = f"""
-This dataset contains {df.shape[0]} rows and {df.shape[1]} columns.
+Dataset contains {df.shape[0]} rows and {df.shape[1]} columns.
 
-The dataset contains {missing} missing values and {duplicates} duplicate records.
+Missing Values: {missing}
 
-There are {len(numeric_df.columns)} numeric variables available for statistical analysis.
+Duplicate Records: {duplicates}
 
-The dataset appears suitable for exploratory data analysis, machine learning, predictive analytics, and business intelligence reporting.
+Numeric Features: {len(numeric_df.columns)}
+
+This dataset appears suitable for analytics, reporting, machine learning, and predictive modeling.
 """
 
 st.info(summary)
 
-# ====================================
+# ==========================
 # DATA QUALITY
-# ====================================
+# ==========================
 
 st.header("🧹 Data Quality Assessment")
 
 if missing == 0:
     st.success("No missing values detected.")
 else:
-    st.warning(
-        f"{missing} missing values detected."
-    )
+    st.warning(f"{missing} missing values detected.")
 
 if duplicates == 0:
     st.success("No duplicate rows detected.")
 else:
-    st.warning(
-        f"{duplicates} duplicate rows detected."
-    )
+    st.warning(f"{duplicates} duplicate rows detected.")
 
-# ====================================
-# TOP CORRELATIONS
-# ====================================
+# ==========================
+# CORRELATIONS
+# ==========================
+
+strongest_pair = None
 
 if len(numeric_df.columns) > 1:
 
@@ -135,66 +171,47 @@ if len(numeric_df.columns) > 1:
     corr_pairs = (
         corr_matrix.abs()
         .unstack()
-        .sort_values(
-            ascending=False
-        )
+        .sort_values(ascending=False)
     )
 
-    corr_pairs = corr_pairs[
-        corr_pairs < 1
-    ]
+    corr_pairs = corr_pairs[corr_pairs < 1]
 
-    shown = set()
+    displayed = 0
 
     for pair, value in corr_pairs.items():
 
-        if pair not in shown:
+        st.write(
+            f"{pair[0]} ↔ {pair[1]} = {value:.2f}"
+        )
 
-            st.write(
-                f"{pair[0]} ↔ {pair[1]} = {value:.2f}"
-            )
+        if strongest_pair is None:
+            strongest_pair = pair
 
-            shown.add(pair)
+        displayed += 1
 
-            if len(shown) == 5:
-                break
+        if displayed == 5:
+            break
 
-# ====================================
+# ==========================
 # AI RECOMMENDATIONS
-# ====================================
+# ==========================
 
 st.header("💡 AI Recommendations")
 
-recommendations = []
-
 if duplicates > 0:
-    recommendations.append(
-        "Remove duplicate rows before modeling."
-    )
+    st.write("• Remove duplicate rows before modeling.")
 
 if missing > 0:
-    recommendations.append(
-        "Handle missing values using imputation or removal."
-    )
+    st.write("• Handle missing values.")
 
-recommendations.append(
-    "Investigate highly correlated features."
-)
+st.write("• Investigate highly correlated features.")
+st.write("• Perform feature engineering.")
+st.write("• Consider predictive modeling.")
+st.write("• Evaluate business KPIs and trends.")
 
-recommendations.append(
-    "Consider building predictive models."
-)
-
-recommendations.append(
-    "Perform feature engineering."
-)
-
-for rec in recommendations:
-    st.write(f"• {rec}")
-
-# ====================================
+# ==========================
 # DATASET CHAT
-# ====================================
+# ==========================
 
 st.header("💬 Ask About Your Dataset")
 
@@ -206,12 +223,12 @@ if question:
 
     q = question.lower()
 
-    if "row" in q:
+    if "how many rows" in q:
         st.success(
             f"The dataset contains {df.shape[0]} rows."
         )
 
-    elif "column" in q:
+    elif "how many columns" in q:
         st.success(
             f"The dataset contains {df.shape[1]} columns."
         )
@@ -226,92 +243,48 @@ if question:
             f"The dataset contains {duplicates} duplicate rows."
         )
 
-    elif "important" in q or "correlation" in q:
+    elif (
+        "strongest" in q
+        or "correlation" in q
+        or "relationship" in q
+    ):
 
-        if len(numeric_df.columns) > 1:
-
-            strongest = corr_pairs.index[0]
+        if strongest_pair:
 
             st.success(
-                f"The strongest relationship is between {strongest[0]} and {strongest[1]}."
+                f"The strongest relationship is between {strongest_pair[0]} and {strongest_pair[1]}."
             )
 
-    elif "machine learning" in q:
-
-        st.success(
-            "Yes. This dataset is suitable for machine learning if the target variable is clearly defined."
-        )
-
-    elif "tell" in q or "summary" in q:
-
+    elif "summary" in q:
         st.success(summary)
 
     else:
-
         st.info(
-            "Try asking about rows, columns, missing values, duplicates, correlations, machine learning, or summary."
+            "Use GenAI Analysis below for deeper questions."
         )
-import requests
 
-HF_TOKEN = st.secrets["HF_TOKEN"]
+# ==========================
+# GENAI ANALYSIS
+# ==========================
 
-API_URL = (
-    "https://api-inference.huggingface.co/models/"
-    "mistralai/Mistral-7B-Instruct-v0.2"
-)
-
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
-}
-
-def ask_llm(prompt):
-
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 300
-        }
-    }
-
-    response = requests.post(
-        API_URL,
-        headers=headers,
-        json=payload
-    )
-
-    return response.json()[0]["generated_text"]
-st.header("🤖 GenAI Analysis")
-
-if st.button("Generate AI Insights"):
-
-    with st.spinner("Analyzing dataset..."):
-
-        try:
-
-            result = ask_llm(prompt)
-
-            st.write(result)
-
-        except Exception as e:
-
-            st.error(str(e))
 dataset_context = f"""
 Rows: {df.shape[0]}
 Columns: {df.shape[1]}
 
-Columns:
+Column Names:
 {list(df.columns)}
 
 Missing Values:
 {missing}
 
-Duplicates:
+Duplicate Records:
 {duplicates}
 """
+
 prompt = f"""
 You are a Senior Data Analyst.
 
-Analyze this dataset.
+Analyze this dataset:
 
 {dataset_context}
 
@@ -323,9 +296,35 @@ Provide:
 4. Recommended ML Models
 5. Business Recommendations
 """
-# ====================================
+
+st.header("🤖 GenAI Analysis")
+
+if st.button("Generate AI Insights"):
+
+    if HF_TOKEN == "":
+        st.error(
+            "HF_TOKEN not found in Streamlit Secrets."
+        )
+
+    else:
+
+        with st.spinner(
+            "Generating AI insights..."
+        ):
+
+            try:
+
+                result = ask_llm(prompt)
+
+                st.write(result)
+
+            except Exception as e:
+
+                st.error(str(e))
+
+# ==========================
 # DOWNLOAD REPORT
-# ====================================
+# ==========================
 
 report = df.describe(
     include="all"
@@ -337,4 +336,3 @@ st.download_button(
     file_name="analysis_report.csv",
     mime="text/csv"
 )
-
