@@ -28,10 +28,7 @@ if uploaded_file is not None:
         include=["int64", "float64"]
     )
 
-else:
-    st.info(
-        "Upload a CSV file to begin analysis."
-    )
+
 
 
 # ====================================
