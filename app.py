@@ -265,6 +265,21 @@ headers = {
 }
 
 def ask_llm(prompt):
+
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 300
+        }
+    }
+
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json=payload
+    )
+
+    return response.json()[0]["generated_text"]
 st.header("🤖 GenAI Analysis")
 
 if st.button("Generate AI Insights"):
@@ -280,20 +295,6 @@ if st.button("Generate AI Insights"):
         except Exception as e:
 
             st.error(str(e))
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 300
-        }
-    }
-
-    response = requests.post(
-        API_URL,
-        headers=headers,
-        json=payload
-    )
-
-    return response.json()[0]["generated_text"]
 dataset_context = f"""
 Rows: {df.shape[0]}
 Columns: {df.shape[1]}
