@@ -265,7 +265,21 @@ headers = {
 }
 
 def ask_llm(prompt):
+st.header("🤖 GenAI Analysis")
 
+if st.button("Generate AI Insights"):
+
+    with st.spinner("Analyzing dataset..."):
+
+        try:
+
+            result = ask_llm(prompt)
+
+            st.write(result)
+
+        except Exception as e:
+
+            st.error(str(e))
     payload = {
         "inputs": prompt,
         "parameters": {
@@ -292,7 +306,8 @@ Missing Values:
 
 Duplicates:
 {duplicates}
-"""prompt = f"""
+"""
+prompt = f"""
 You are a Senior Data Analyst.
 
 Analyze this dataset.
