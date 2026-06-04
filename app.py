@@ -251,7 +251,62 @@ if question:
         st.info(
             "Try asking about rows, columns, missing values, duplicates, correlations, machine learning, or summary."
         )
+import requests
 
+HF_TOKEN = st.secrets["HF_TOKEN"]
+
+API_URL = (
+    "https://api-inference.huggingface.co/models/"
+    "mistralai/Mistral-7B-Instruct-v0.2"
+)
+
+headers = {
+    "Authorization": f"Bearer {HF_TOKEN}"
+}
+
+def ask_llm(prompt):
+
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 300
+        }
+    }
+
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json=payload
+    )
+
+    return response.json()[0]["generated_text"]
+dataset_context = f"""
+Rows: {df.shape[0]}
+Columns: {df.shape[1]}
+
+Columns:
+{list(df.columns)}
+
+Missing Values:
+{missing}
+
+Duplicates:
+{duplicates}
+"""prompt = f"""
+You are a Senior Data Analyst.
+
+Analyze this dataset.
+
+{dataset_context}
+
+Provide:
+
+1. Executive Summary
+2. Key Insights
+3. Risks
+4. Recommended ML Models
+5. Business Recommendations
+"""
 # ====================================
 # DOWNLOAD REPORT
 # ====================================
