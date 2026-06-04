@@ -27,10 +27,11 @@ if uploaded_file is not None:
     numeric_df = df.select_dtypes(
         include=["int64", "float64"]
     )
+
 else:
-st.info(
-    "Upload a CSV file to begin analysis."
-)
+    st.info(
+        "Upload a CSV file to begin analysis."
+    )
 
 
 # ====================================
