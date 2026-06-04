@@ -19,15 +19,14 @@ type=["csv"]
 
 if uploaded_file is not None:
 
+    df = pd.read_csv(uploaded_file)
 
-df = pd.read_csv(uploaded_file)
+    missing = df.isnull().sum().sum()
+    duplicates = df.duplicated().sum()
 
-missing = df.isnull().sum().sum()
-duplicates = df.duplicated().sum()
-
-numeric_df = df.select_dtypes(
-    include=["int64", "float64"]
-)
+    numeric_df = df.select_dtypes(
+        include=["int64", "float64"]
+    )
 
 # ====================================
 # DATASET HEALTH SCORE
