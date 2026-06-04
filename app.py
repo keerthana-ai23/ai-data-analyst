@@ -13,21 +13,22 @@ st.write(
 )
 
 uploaded_file = st.file_uploader(
-"Upload CSV File",
-type=["csv"]
+    "Upload CSV File",
+    type=["csv"]
 )
 
-if uploaded_file is not None:
+if uploaded_file is None:
+    st.info("Upload a CSV file to begin analysis.")
+    st.stop()
 
-    df = pd.read_csv(uploaded_file)
+df = pd.read_csv(uploaded_file)
 
-    missing = df.isnull().sum().sum()
-    duplicates = df.duplicated().sum()
+missing = df.isnull().sum().sum()
+duplicates = df.duplicated().sum()
 
-    numeric_df = df.select_dtypes(
-        include=["int64", "float64"]
-    )
-
+numeric_df = df.select_dtypes(
+    include=["int64", "float64"]
+)
 
 
 
